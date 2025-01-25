@@ -3,6 +3,22 @@ use std::env;
 use std::fs::File;
 use std::io::{self, Read, Write};
 
+fn update_progress(progress: i64, maxsize: i64) {
+    let progress_percentage = progress as f64 / maxsize as f64;
+    let bar_width = 20;
+
+    let num_hashes = (progress_percentage * bar_width as f64).round() as usize;
+    let num_dashes = bar_width - num_hashes;
+
+    let progress_bar = format!("{}{}", "#".repeat(num_hashes), "-".repeat(num_dashes));
+
+    println!(
+        "{:x} of {:x} complete. [{}]",
+        progress, maxsize, progress_bar
+    );
+    print!("\x1B[2A");
+}
+
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
 
@@ -47,11 +63,22 @@ fn main() -> io::Result<()> {
     }
 
     // xoring the data
+    let mut progress_counter = 0;
+    let maxsize = file_data.len();
+
     let xor_result: Vec<u8> = file_data
         .iter()
         .enumerate()
-        .map(|(i, &byte)| byte ^ xor_pad_data[i % xor_pad_data.len()])
+        .map(|(i, &byte)| {
+            progress_counter += 1;
+            if progress_counter % 5000000 == 0 {
+                update_progress(progress_counter, maxsize as i64);
+            }
+            byte ^ xor_pad_data[i % xor_pad_data.len()]
+        })
         .collect();
+
+    update_progress(progress_counter, maxsize as i64);
 
     // writing the xor'd data to file
     let output_path = format!("{}_xor", file_path);

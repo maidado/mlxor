@@ -43,7 +43,7 @@ fn main() -> io::Result<()> {
         std::process::exit(1);
     }
 
-    // getting th efile paths from the arguments
+    // getting the file paths from the arguments
     let file_path = &args[1];
     let xor_pad_file_path = &args[2];
 

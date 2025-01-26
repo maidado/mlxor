@@ -1,3 +1,4 @@
+use indicatif::{ProgressBar, ProgressStyle};
 use rand::{rngs::OsRng, RngCore};
 use std::env;
 use std::fs::File;
@@ -21,6 +22,14 @@ fn update_progress(progress: i64, maxsize: i64) {
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
+
+    println!(
+        r#"
+mlXOR - File XOR obfuscator/deobfuscator
+Copyright (c) 2025 Mai Lawton
+This program is licensed under the MIT License
+"#
+    );
 
     // check if program started with --genxorpad argument. alternatively with -g
     if args.len() == 4 && args[1] == "--genxorpad" || args.len() == 4 && args[1] == "-g" {
@@ -62,30 +71,36 @@ fn main() -> io::Result<()> {
         std::process::exit(1);
     }
 
+    let progress_bar = ProgressBar::new(file_data.len() as u64);
+    progress_bar.set_style(
+        ProgressStyle::default_spinner()
+            .template("{bar:40} {percent}%\n[{elapsed_precise}] {bytes}/{total_bytes} (ETA: {eta})")
+            .expect("Something went wrong..."),
+    );
+
     // xoring the data
-    let mut progress_counter = 0;
-    let maxsize = file_data.len();
+    let mut progressbar_cooldown = 0;
 
     let xor_result: Vec<u8> = file_data
         .iter()
         .enumerate()
         .map(|(i, &byte)| {
-            progress_counter += 1;
-            if progress_counter % 5000000 == 0 {
-                update_progress(progress_counter, maxsize as i64);
+            progressbar_cooldown += 1;
+            if progressbar_cooldown % 1000 == 0 {
+                progress_bar.inc(1000);
             }
             byte ^ xor_pad_data[i % xor_pad_data.len()]
         })
         .collect();
 
-    update_progress(progress_counter, maxsize as i64);
+    progress_bar.finish_with_message("XOR operation completed!");
 
     // writing the xor'd data to file
     let output_path = format!("{}_xor", file_path);
     let mut output_file = File::create(&output_path)?;
     output_file.write_all(&xor_result)?;
 
-    println!("XOR finished! Output file: {}", output_path);
+    println!("\n\nXOR finished! Output file: {}\n", output_path);
 
     Ok(())
 }
